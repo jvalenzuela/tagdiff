@@ -71,7 +71,7 @@ def summary(l5x, hashes):
         heading("Summary"),
         Paragraph(
             """
-            This report identifies differences structure tag .PRE
+            This report identifies differences in structure tag .PRE
             member values, such as in timers and counters, between the two
             files listed below. All content other than .PRE values is
             excluded from comparison; add-on instruction local tags,
