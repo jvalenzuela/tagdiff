@@ -56,7 +56,7 @@ def heading(title):
 
 
 def unordered_list(items, **kwargs):
-    """Genertes an unordered list flowable."""
+    """Generates an unordered list flowable."""
     return ListFlowable(
         items,
         bulletType="bullet",
