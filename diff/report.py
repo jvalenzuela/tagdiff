@@ -20,6 +20,7 @@ STYLES["Normal"].fontSize = toLength("12 pt")
 STYLES["Heading1"].spaceBefore = toLength("20 pt")
 STYLES["Code"].fontSize = toLength("12 pt")
 STYLES["Code"].leading = toLength("12 pt")
+STYLES["Code"].leftIndent = 0
 
 
 def generate(l5x, hashes, tags, diff):
@@ -27,7 +28,7 @@ def generate(l5x, hashes, tags, diff):
     doc = SimpleDocTemplate(FILENAME)
     story = []
     story.extend(summary(l5x, hashes))
-    story.extend(differences(diff))
+    story.extend(differences(l5x, tags, diff))
     story.extend(exclusions(l5x, tags))
     doc.build(story)
 
@@ -90,15 +91,52 @@ def summary(l5x, hashes):
     return flowables
 
 
-def differences(diff):
+def differences(l5x, tags, diff):
     """Creates the Differences section."""
     flowables = [heading("Differences")]
     if diff:
-        flowables.append(list_all_tags(diff))
+        flowables.append(tag_value_table(l5x, tags, diff))
     else:
         flowables.append(Paragraph("No differences found.", STYLES["Normal"]))
 
     return flowables
+
+
+def tag_value_table(l5x, tags, diff):
+    """Generates a table listing the values of altered tags."""
+    rows = []
+
+    # Header row.
+    header = [Preformatted(f, STYLES["Normal"]) for f in l5x]
+    header.insert(0, None) # First column is empty.
+    rows.append(header)
+
+    scopes = {t.scope for t in diff}
+
+    if "Controller" in scopes:
+        rows.extend(tag_value_rows("Controller", l5x, tags, diff))
+        scopes.remove("Controller")
+
+    for prg in sorted(scopes):
+        rows.extend(tag_value_rows(prg, l5x, tags, diff))
+
+    return Table(rows)
+
+
+def tag_value_rows(scope, l5x, tags, diff):
+    """Generates table rows listing tag values in single scope."""
+    rows = []
+
+    # First row lists the scope name.
+    rows.append([Preformatted(scope, STYLES["Heading3"]), None, None])
+
+    scope_tags = [t for t in sorted(diff) if t.scope == scope]
+    for tag in scope_tags:
+        tag_row = [tag_name(tag)]
+        tag_row.extend([tags[f].values[tag] for f in l5x])
+        rows.append(tag_row)
+
+    return rows
 
 
 def exclusions(l5x, tags):
