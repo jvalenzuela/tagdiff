@@ -41,4 +41,9 @@ if __name__ == "__main__":
     hashes = {f: compute_md5(f) for f in args.l5x}
     tags = {f: l5x.parse(f) for f in args.l5x}
     diff = compare(tags[args.l5x[0]].values, tags[args.l5x[1]].values)
-    report.generate(args.l5x, hashes, tags, diff)
+
+    # Excluded tags are those without decorated data but have differing
+    # raw values.
+    excl = compare(*[t.no_data for t in tags.values()])
+
+    report.generate(args.l5x, hashes, tags, diff, excl)

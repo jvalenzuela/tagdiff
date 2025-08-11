@@ -23,13 +23,13 @@ STYLES["Code"].leading = toLength("12 pt")
 STYLES["Code"].leftIndent = 0
 
 
-def generate(l5x, hashes, tags, diff):
+def generate(l5x, hashes, tags, diff, excl):
     """Top level function to generate the entire report output."""
     doc = SimpleDocTemplate(FILENAME)
     story = []
     story.extend(summary(l5x, hashes))
     story.extend(differences(l5x, tags, diff))
-    story.extend(exclusions(l5x, tags))
+    story.extend(exclusions(excl))
     doc.build(story)
 
 
@@ -139,26 +139,23 @@ def tag_value_rows(scope, l5x, tags, diff):
     return rows
 
 
-def exclusions(l5x, tags):
+def exclusions(excl):
     """Creates the Exclusions section."""
     flowables = []
 
-    # Only consider tags that exist in both projects as tags unique to
-    # a single project are inherently excluded.
-    excl_tags = tags[l5x[0]].no_data.intersection(tags[l5x[1]].no_data)
-
-    if excl_tags:
+    if excl:
         flowables.append(heading("Additional Exclusions"))
         flowables.append(
             Paragraph(
                 """
-                The tags listed below were not compared due to the lack of
-                structured value information in the L5X file.
+                The tags listed below have differing values but were not
+                compared due to the lack of structured value information in
+                the L5X file.
                 """,
                 STYLES["Normal"],
             )
         )
-        flowables.append(list_all_tags(excl_tags))
+        flowables.append(list_all_tags(excl))
 
     return flowables
 

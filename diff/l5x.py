@@ -29,6 +29,10 @@ class PreExtractor(xml.sax.ContentHandler):
     # XML element names.
     # pylint: disable=invalid-name
 
+    # Disable public method limit because the public methods are defined
+    # by the ContentHandler interface.
+    # pylint: disable=too-many-public-methods
+
     def __init__(self):
         super().__init__()
 
@@ -43,8 +47,12 @@ class PreExtractor(xml.sax.ContentHandler):
         self.tag_members = None
 
         self.tag_has_decorated_data = False
+        self.raw_tag_data = None
         self.values = {}  # Tag values keyed by Tag tuple.
-        self.no_data = set()  # Tags without a decorated data element.
+
+        # Raw tag data for tags without a decorated data element,
+        # keyed by Tag tuple.
+        self.no_data = {}
 
     def startElement(self, name, attrs):
         try:
@@ -107,7 +115,11 @@ class PreExtractor(xml.sax.ContentHandler):
     def end_Tag(self):
         """Handler for the closing of a Tag element."""
         if not self.tag_has_decorated_data:
-            self.no_data.add(Tag(self.scope, self.tag_name, ()))
+            tag = Tag(self.scope, self.tag_name, ())
+            data = bytes.fromhex("".join(self.raw_tag_data))
+            self.no_data[tag] = data
+
+        self.raw_tag_data = None
 
     def start_Data(self, attrs):
         """Handler for the start of a Data element.
@@ -117,7 +129,18 @@ class PreExtractor(xml.sax.ContentHandler):
         try:
             if attrs.getValue("Format") == "Decorated":
                 self.tag_has_decorated_data = True
+
         except KeyError:
+            self.raw_tag_data = []
+
+    def characters(self, content):
+        """Handler for element content."""
+        # Capture raw tag data from raw Data elements.
+        try:
+            self.raw_tag_data.append(content)
+
+        # Ignore content when not collecting raw tag data.
+        except AttributeError:
             pass
 
     def start_Element(self, attrs):
