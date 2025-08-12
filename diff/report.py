@@ -1,5 +1,6 @@
 """This module generates the PDF report output."""
 
+import os
 from reportlab.platypus import (
     ListFlowable,
     ListItem,
@@ -84,8 +85,11 @@ def summary(l5x, hashes):
 
     # Add file table.
     rows = [[Preformatted(s, STYLES["Heading3"]) for s in ["File Name", "MD5"]]]
-    for f in l5x:
-        rows.append([Preformatted(s, STYLES["Normal"]) for s in [f, hashes[f]]])
+    for path in l5x:
+        filename = os.path.basename(path)
+        rows.append(
+            [Preformatted(s, STYLES["Normal"]) for s in [filename, hashes[path]]]
+        )
     flowables.append(Table(rows, spaceBefore=toLength("10 pt")))
 
     return flowables
@@ -107,7 +111,7 @@ def tag_value_table(l5x, tags, diff):
     rows = []
 
     # Header row.
-    header = [Preformatted(f, STYLES["Normal"]) for f in l5x]
+    header = [Preformatted(os.path.basename(path), STYLES["Normal"]) for path in l5x]
     header.insert(0, None) # First column is empty.
     rows.append(header)
 

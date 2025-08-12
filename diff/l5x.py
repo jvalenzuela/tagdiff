@@ -1,6 +1,7 @@
 """This module handles extracting tag data from the source L5X files."""
 
 import collections
+import hashlib
 import xml.sax
 
 
@@ -9,6 +10,28 @@ def parse(filename):
     handler = PreExtractor()
     xml.sax.parse(filename, handler)
     return handler
+
+
+def compute_md5(filename):
+    """Calculates the MD5 of a file."""
+    with open(filename, "rb") as f:
+        digest = hashlib.file_digest(f, "md5")
+    return digest.hexdigest()
+
+
+def compare(a, b):
+    """Compares tag values."""
+    diffs = set()
+    for key in a:
+        try:
+            if a[key] != b[key]:
+                diffs.add(key)
+
+        # Ignore tags that don't exist in both files.
+        except KeyError:
+            continue
+
+    return diffs
 
 
 # Data type containing information to fully identify a tag member.
