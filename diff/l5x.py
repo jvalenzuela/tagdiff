@@ -121,6 +121,14 @@ class PreExtractor(xml.sax.ContentHandler):
         """
         self.ignore_children()
 
+    def start_Modules(self, _attrs):
+        """Handler for the start of the Modules element.
+
+        Module definitions need to be explicitly ignored because they
+        may contain DataValueMember elements.
+        """
+        self.ignore_children()
+
     def start_Controller(self, _attrs):
         """Handler for the start of the Controller element."""
         self.scope = "Controller"
