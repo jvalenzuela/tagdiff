@@ -70,6 +70,7 @@ class PreExtractor(xml.sax.ContentHandler):
         self.tag_members = None
 
         self.tag_has_decorated_data = False
+        self.is_alias = False
         self.raw_tag_data = None
         self.values = {}  # Tag values keyed by Tag tuple.
 
@@ -139,13 +140,21 @@ class PreExtractor(xml.sax.ContentHandler):
 
     def start_Tag(self, attrs):
         """Handler for the start of a Tag element."""
-        self.tag_name = attrs.getValue("Name")
-        self.tag_members = []
-        self.tag_has_decorated_data = False
+        if attrs.getValue("TagType") == "Alias":
+            self.is_alias = True
+        else:
+            self.is_alias = False
+
+        if self.is_alias:
+            self.ignore_children()
+        else:
+            self.tag_name = attrs.getValue("Name")
+            self.tag_members = []
+            self.tag_has_decorated_data = False
 
     def end_Tag(self):
         """Handler for the closing of a Tag element."""
-        if not self.tag_has_decorated_data:
+        if not self.is_alias and not self.tag_has_decorated_data:
             tag = Tag(self.scope, self.tag_name, ())
             data = bytes.fromhex("".join(self.raw_tag_data))
             self.no_data[tag] = data
