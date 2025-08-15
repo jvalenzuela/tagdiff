@@ -70,7 +70,6 @@ class PreExtractor(xml.sax.ContentHandler):
         self.tag_members = None
 
         self.tag_has_decorated_data = False
-        self.is_alias = False
         self.raw_tag_data = None
         self.values = {}  # Tag values keyed by Tag tuple.
 
@@ -95,10 +94,12 @@ class PreExtractor(xml.sax.ContentHandler):
         try:
             self.ignored_elements.pop()
 
-        # Dispatch normally if not ignoring elements(AttributeError) or
-        # leaving the element where ignoring was started(IndexError).
-        except (AttributeError, IndexError):
+        # Leaving the element where ignoring was started.
+        except IndexError:
             self.ignored_elements = None
+
+        # Dispatch normally if not ignoring elements.
+        except (AttributeError, IndexError):
             method_name = f"end_{name}"
             try:
                 method = getattr(self, method_name)
@@ -106,8 +107,8 @@ class PreExtractor(xml.sax.ContentHandler):
                 return
             method()
 
-    def ignore_children(self):
-        """Enables skipping all children of the current element."""
+    def ignore_element(self):
+        """Enables skipping the current element and all its children."""
         if self.ignored_elements is None:
             self.ignored_elements = []
         else:
@@ -120,7 +121,7 @@ class PreExtractor(xml.sax.ContentHandler):
         tag definitions may contain DataValueMember elements, which would
         otherwise be confused for an actual tag instance.
         """
-        self.ignore_children()
+        self.ignore_element()
 
     def start_Modules(self, _attrs):
         """Handler for the start of the Modules element.
@@ -128,7 +129,7 @@ class PreExtractor(xml.sax.ContentHandler):
         Module definitions need to be explicitly ignored because they
         may contain DataValueMember elements.
         """
-        self.ignore_children()
+        self.ignore_element()
 
     def start_Controller(self, _attrs):
         """Handler for the start of the Controller element."""
@@ -140,13 +141,9 @@ class PreExtractor(xml.sax.ContentHandler):
 
     def start_Tag(self, attrs):
         """Handler for the start of a Tag element."""
-        if attrs.getValue("TagType") == "Alias":
-            self.is_alias = True
-        else:
-            self.is_alias = False
+        if (attrs.getValue("TagType") == "Alias") or (attrs.getValue("DataType") == "MESSAGE"):
+            self.ignore_element()
 
-        if self.is_alias:
-            self.ignore_children()
         else:
             self.tag_name = attrs.getValue("Name")
             self.tag_members = []
@@ -154,7 +151,7 @@ class PreExtractor(xml.sax.ContentHandler):
 
     def end_Tag(self):
         """Handler for the closing of a Tag element."""
-        if not self.is_alias and not self.tag_has_decorated_data:
+        if not self.tag_has_decorated_data:
             tag = Tag(self.scope, self.tag_name, ())
             data = bytes.fromhex("".join(self.raw_tag_data))
             self.no_data[tag] = data
