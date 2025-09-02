@@ -2,8 +2,6 @@
 
 import os
 from reportlab.platypus import (
-    ListFlowable,
-    ListItem,
     SimpleDocTemplate,
     Table,
     Paragraph,
@@ -24,13 +22,12 @@ STYLES["Code"].leading = toLength("12 pt")
 STYLES["Code"].leftIndent = 0
 
 
-def generate(l5x, hashes, tags, diff, excl):
+def generate(files, tags, diff):
     """Top level function to generate the entire report output."""
     doc = SimpleDocTemplate(FILENAME)
     story = []
-    story.extend(summary(l5x, hashes))
-    story.extend(differences(l5x, tags, diff))
-    story.extend(exclusions(excl))
+    story.extend(summary())
+    story.extend(differences(files, tags, diff))
     doc.build(story)
 
 
@@ -56,78 +53,56 @@ def heading(title):
     return Paragraph(title, STYLES["Heading1"])
 
 
-def unordered_list(items, **kwargs):
-    """Generates an unordered list flowable."""
-    return ListFlowable(
-        items,
-        bulletType="bullet",
-        start="",
-        leftIndent=0,
-        **kwargs,
-    )
-
-
-def summary(l5x, hashes):
+def summary():
     """Generates the Summary section."""
     flowables = [
         heading("Summary"),
         Paragraph(
             """
-            This report identifies differences in structure tag .PRE
-            member values, such as in timers and counters, between the two
-            files listed below. All content other than .PRE values is
-            excluded from comparison; add-on instruction local tags,
-            even those with .PRE members, are also excluded.
+            This report identifies differences in timer and counter
+            preset(.PRE) values. All content other than .PRE values is
+            excluded from comparison.
             """,
             STYLES["Normal"],
         ),
     ]
 
-    # Add file table.
-    rows = [[Preformatted(s, STYLES["Heading3"]) for s in ["File Name", "MD5"]]]
-    for path in l5x:
-        filename = os.path.basename(path)
-        rows.append(
-            [Preformatted(s, STYLES["Normal"]) for s in [filename, hashes[path]]]
-        )
-    flowables.append(Table(rows, spaceBefore=toLength("10 pt")))
-
     return flowables
 
 
-def differences(l5x, tags, diff):
+def differences(files, tags, diff):
     """Creates the Differences section."""
     flowables = [heading("Differences")]
     if diff:
-        flowables.append(tag_value_table(l5x, tags, diff))
+        flowables.append(tag_value_table(files, tags, diff))
     else:
         flowables.append(Paragraph("No differences found.", STYLES["Normal"]))
 
     return flowables
 
 
-def tag_value_table(l5x, tags, diff):
+def tag_value_table(files, tags, diff):
     """Generates a table listing the values of altered tags."""
     rows = []
 
     # Header row.
-    header = [Preformatted(os.path.basename(path), STYLES["Normal"]) for path in l5x]
-    header.insert(0, None) # First column is empty.
+    header = [Preformatted(os.path.basename(path), STYLES["Normal"]) for path in files]
+    header.insert(0, None)  # First column is empty.
     rows.append(header)
 
     scopes = {t.scope for t in diff}
 
     if "Controller" in scopes:
-        rows.extend(tag_value_rows("Controller", l5x, tags, diff))
+        rows.extend(tag_value_rows("Controller", files, tags, diff))
         scopes.remove("Controller")
 
     for prg in sorted(scopes):
-        rows.extend(tag_value_rows(prg, l5x, tags, diff))
+        rows.extend(tag_value_rows(prg, files, tags, diff))
 
     return Table(rows)
 
 
-def tag_value_rows(scope, l5x, tags, diff):
+def tag_value_rows(scope, files, tags, diff):
     """Generates table rows listing tag values in single scope."""
     rows = []
 
@@ -137,64 +112,7 @@ def tag_value_rows(scope, l5x, tags, diff):
     scope_tags = [t for t in sorted(diff) if t.scope == scope]
     for tag in scope_tags:
         tag_row = [tag_name(tag)]
-        tag_row.extend([tags[f].values[tag] for f in l5x])
+        tag_row.extend([tags[f][tag] for f in files])
         rows.append(tag_row)
 
     return rows
-
-
-def exclusions(excl):
-    """Creates the Exclusions section."""
-    flowables = []
-
-    if excl:
-        flowables.append(heading("Additional Exclusions"))
-        flowables.append(
-            Paragraph(
-                """
-                The tags listed below have differing values but were not
-                compared due to the lack of structured value information in
-                the L5X file.
-                """,
-                STYLES["Normal"],
-            )
-        )
-        flowables.append(list_all_tags(excl))
-
-    return flowables
-
-
-def list_all_tags(tags):
-    """Generates a list of tags organized by scope."""
-    scopes = {t.scope for t in tags}
-    items = []
-
-    # List Controller tags first, if any.
-    if "Controller" in scopes:
-        items.extend(list_scope_tags("Controller", tags))
-        scopes.remove("Controller")
-
-    # Add program tags.
-    for prg in sorted(scopes):
-        items.extend(list_scope_tags(prg, tags))
-
-    return unordered_list(items)
-
-
-def list_scope_tags(scope, tags):
-    """Lists tags from a single scope.
-
-    Returns a list of flowables to be included in a ListFlowable.
-    """
-    items = []
-
-    # Add a top-level item listing the scope name.
-    items.append(
-        ListItem(Paragraph(scope, STYLES["Heading3"]), spaceBefore=toLength("5 pt"))
-    )
-
-    # Add a nested list containing the tags in this scope.
-    scope_tags = [tag_name(t) for t in sorted(tags) if t.scope == scope]
-    items.append(unordered_list(scope_tags))
-
-    return items
