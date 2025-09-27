@@ -1,3 +1,3 @@
 """Program version information."""
 
-VERSION = "5"
+VERSION = "6"
