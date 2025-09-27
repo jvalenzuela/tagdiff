@@ -40,9 +40,11 @@ def tag_name(tag):
             items.append(".")
             items.append(member)
 
-        # Array indices are represented as a tuple of integers.
+        # Array indices are represented as a tuple of integers,
+        # and need to be reversed to match the order presented
+        # in RSLogix.
         else:
-            indices = ",".join(str(i) for i in member)
+            indices = ",".join(str(i) for i in reversed(member))
             items.append(f"[{indices}]")
 
     return Preformatted("".join(items), STYLES["Code"])

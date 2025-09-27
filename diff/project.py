@@ -156,7 +156,9 @@ def get_value(tag, scope):
     value = scope[tag.name].value
     for member in tag.members:
         if isinstance(member, tuple):
-            for dim in member:
+            # Dimensions need to be reversed so the most-significant
+            # index is applied first.
+            for dim in reversed(member):
                 value = value[dim]
         else:
             value = value[member]
